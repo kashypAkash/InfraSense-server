@@ -7,7 +7,7 @@ DATABASE = MySQLDatabase('infraSense-dev', user='root', passwd='root', host='127
 
 class User(Model):
     """A base model that will use our MySQL database"""
-    username = CharField()
+    username = CharField(unique=True)
     email = CharField(unique=True)
     password = CharField(max_length=40)
     is_admin = BooleanField(default=False)
