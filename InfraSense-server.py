@@ -3,11 +3,13 @@ import boto3, json
 from flask import Flask, Blueprint, render_template, request
 from flask_cors import CORS
 from endpoints.user import login_api
+from endpoints.aws import aws_api
 from models.user import initialize
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 app.register_blueprint(login_api)
+app.register_blueprint(aws_api)
 
 app.secret_key = '2#$$#SFGA#$@%FSG%#??|{KJHJK{KNKJK?KKJ\mnkjj'
 
@@ -15,13 +17,6 @@ app.secret_key = '2#$$#SFGA#$@%FSG%#??|{KJHJK{KNKJK?KKJ\mnkjj'
 @app.route('/')
 def index():
     return render_template('index.html')
-
-'''@app.route('/')
-def hello_world():
-    ec2 = boto3.resource('ec2')
-    instance = ec2.Instance('i-07d5d55d9facb5790')
-    print(instance.start())
-    return "hello world"'''
 
 
 @app.route('/userValidate',methods=['POST'])
