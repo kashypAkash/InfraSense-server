@@ -1,12 +1,23 @@
 import boto3, json
 
-from flask import Flask,request,render_template, session
-from flask_cors import CORS, cross_origin
+from flask import Flask, Blueprint, render_template, request
+from flask_cors import CORS
+from flask_restful import reqparse
+from endpoints.validate import login_api
+from models.models import initialize
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
+app.register_blueprint(login_api)
 
 app.secret_key = '2#$$#SFGA#$@%FSG%#??|{KJHJK{KNKJK?KKJ\mnkjj'
+parser = reqparse.RequestParser()
+parser.add_argument('username',required=True,
+                    help='Name cannot be blank!', location=['form','json'])
+parser.add_argument('password',required=True,
+                    help='password cannot be blank!',location=['form','json'])
+parser.add_argument('email',required=True,
+                    help='email cannot be blank!',location=['form','json'])
 
 @app.route('/')
 def index():
@@ -34,11 +45,6 @@ def admin_validate():
     return json.dumps(dict({'statusCode':400}))
 
 
-@app.route('/addUser', methods=['POST'])
-def add_user():
-    print(request.json)
-    return json.dumps(dict({'id':'user added', 'statusCode':200}))
-
-
 if __name__ == '__main__':
+    initialize()
     app.run(debug=True,port=5000)
