@@ -1,6 +1,7 @@
 import boto3
+import botocore.exceptions
 
-from flask import Blueprint
+from flask import Blueprint, jsonify
 from flask_restful import Resource, Api, reqparse
 
 # Creating the Connection
@@ -10,9 +11,19 @@ ec2 = boto3.resource('ec2')
 class Create(Resource):
 
     ''' This is resource is for creating or launching New Instances'''
-
+    def __init__(self):
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument('imageid', required=True, help='image_id required'
+                               , location=['form', 'json'])
     def post(self):
-        ec2.create_instances(ImageId='<ami-image-id>', MinCount=1, MaxCount=5)
+        args = self.reqparse.parse_args()
+        try:
+            instances = [instance.id for instance in ec2.create_instances(
+                ImageId=args['imageid'], MinCount=1, MaxCount=5, InstanceType='t2.micro')]
+            return jsonify({'statusCode':200,'instanceids':instances})
+        except botocore.exceptions.ClientError as e:
+            return jsonify({'statusCode':400,'error':e.message})
+
 
 class Start(Resource):
 

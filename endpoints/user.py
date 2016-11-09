@@ -22,7 +22,7 @@ class Login(Resource):
         print(args)
         try:
            if User.get(User.username == args['username']).password == args['password']:
-               return jsonify({'statusCode':200})
+               return jsonify({'statusCode':200,'username':args['username']})
            else:
                return jsonify({'statusCode':400})
         except DoesNotExist:
