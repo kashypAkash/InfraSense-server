@@ -6,14 +6,14 @@
 ### Setup
 * Install python 3.X
 * Install dependent libraries
-1. pip3 install -r requirements.txt
-2. manual steps: 
-                  - pip3 install Flask (Ref: http://flask.pocoo.org/)  
-                  - pip3 install flask-cors (Ref: http://flask-cors.readthedocs.io/en/latest/)  
-                  - pip3 install flask-restful (Ref: https://flask-restful.readthedocs.io/en/0.3.5/)  
-                  - pip3 install boto3 (Ref: https://boto3.readthedocs.io/en/latest/reference/services/ec2.html#instance)  
-                  - pip3 install peewee (Ref: http://flask-peewee.readthedocs.io/en/latest/index.html)  
-3. Setup AWS IAM user: http://docs.aws.amazon.com/lambda/latest/dg/setting-up.html#setting-up-iam  
+    - pip3 install -r requirements.txt
+    - manual steps: (Not needed if above cmd is run)  
+                      - pip3 install Flask (Ref: http://flask.pocoo.org/)  
+                      - pip3 install flask-cors (Ref: http://flask-cors.readthedocs.io/en/latest/)  
+                      - pip3 install flask-restful (Ref: https://flask-restful.readthedocs.io/en/0.3.5/)  
+                      - pip3 install boto3 (Ref: https://boto3.readthedocs.io/en/latest/reference/services/ec2.html#instance)  
+                      - pip3 install peewee (Ref: http://flask-peewee.readthedocs.io/en/latest/index.html)  
+    - Setup AWS IAM user: http://docs.aws.amazon.com/lambda/latest/dg/setting-up.html#setting-up-iam  
 
 ##### Note: Do not forget to add project setting files and other unnecessary files to gitignore file                    
 
