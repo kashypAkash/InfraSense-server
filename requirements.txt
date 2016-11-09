@@ -1,0 +1,7 @@
+boto3==1.4.1
+botocore==1.4.67
+Flask==0.11.1
+Flask-Cors==3.0.2
+Flask-RESTful==0.3.5
+peewee==2.8.5
+PyMySQL==0.7.9
