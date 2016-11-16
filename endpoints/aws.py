@@ -1,6 +1,7 @@
 import boto3
 import botocore.exceptions
 import json
+from datetime import datetime
 
 
 from flask import Blueprint, jsonify
@@ -9,6 +10,7 @@ from models.user import UserSensorHubDetails
 from flask_cors import cross_origin
 # Creating the Connection
 ec2 = boto3.resource('ec2')
+client = boto3.client('cloudwatch')
 
 
 class Create(Resource):
@@ -105,6 +107,35 @@ class createSensorHub(Resource):
                 return jsonify({'statusCode': 400, 'error': e})
         return jsonify({'statusCode': 200, 'instanceDetails' :result})
 
+
+class getMonitoringInfo(Resource):
+
+    ''' This resource is used for starting, stopping and terminating Instance/S
+        pass list or tuple like -> ids = ['instance-id-1', 'instance-id-2', ...] '''
+
+    def __init__(self):
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument('sensorid', required=True, help='sensorid id required'
+                                   , location=['form', 'json'])
+
+    def post(self):
+        args = self.reqparse.parse_args()
+
+        val=ec2.Instance(args['sensorid']);
+        metricsVal = client.get_metric_statistics(Namespace='AWS/EC2',MetricName='CPUUtilization',
+                                                  Dimensions=[{'Name': 'InstanceId', 'Value': args.sensorid}],
+                                                  StartTime=datetime(2016, 11, 15),
+                                                  EndTime=datetime(2016, 11, 17),
+                                                  Period=86400,
+                                                  Statistics=[
+                                                      'Average'
+                                                  ]
+                                                  )
+        print(type(metricsVal))
+        print(metricsVal)
+
+        return jsonify({'statusCode': 200, 'state': val.state,'metricsVal' : metricsVal})
+
 aws_api = Blueprint('endpoints.aws', __name__)
 api = Api(aws_api)
 api.add_resource(Create, '/api/v1/create', endpoint='createinstance')
@@ -112,3 +143,4 @@ api.add_resource(Active, '/api/v1/active', endpoint='activeinstances')
 api.add_resource(Health, '/api/v1/health', endpoint='instancehealth')
 api.add_resource(Start, '/api/v1/start', endpoint='start')
 api.add_resource(createSensorHub, '/api/v1/createSensorHub', endpoint='createSensorHub')
+api.add_resource(getMonitoringInfo, '/api/v1/getMonitoringInfo', endpoint='getMonitoringInfo')
