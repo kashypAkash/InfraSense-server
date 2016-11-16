@@ -5,10 +5,10 @@ from endpoints.aws import aws_api
 from models.user import initialize
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+
 app.register_blueprint(login_api)
 app.register_blueprint(aws_api)
-
+CORS(app, resources={r"/*": {"origins": "*"}})
 DEBUG = True
 PORT = 5000
 

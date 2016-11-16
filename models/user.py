@@ -2,7 +2,7 @@ import pymysql, os
 
 from peewee import *
 
-DATABASE = MySQLDatabase('infraSense-dev', user='root', passwd='root', host='127.0.0.1', port=3306)
+DATABASE = MySQLDatabase('infraSense-dev', user='root', passwd='mad', host='127.0.0.1', port=3306)
 
 
 class User(Model):
@@ -15,7 +15,17 @@ class User(Model):
     class Meta:
         database = DATABASE
 
+class UserSensorHubDetails(Model):
+    """A base model that will use our MySQL database"""
+    username = CharField(max_length=40)
+    SensorHubName = CharField(max_length=40)
+    SensorId = CharField(unique=True)
+    SensorType = CharField(max_length=40)
+
+    class Meta:
+        database = DATABASE
+
 def initialize():
     DATABASE.connect()
-    DATABASE.create_tables([User],safe=True)
+    DATABASE.create_tables([User, UserSensorHubDetails ],safe=True)
 
