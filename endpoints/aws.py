@@ -2,9 +2,11 @@ import boto3
 import botocore.exceptions
 import json
 
+
 from flask import Blueprint, jsonify
 from flask_restful import Resource, Api, reqparse
-
+from models.user import UserSensorHubDetails
+from flask_cors import cross_origin
 # Creating the Connection
 ec2 = boto3.resource('ec2')
 
@@ -74,33 +76,34 @@ class createSensorHub(Resource):
                                , location=['form', 'json'])
         self.reqparse.add_argument('imageId', required=True, help='Image Id is required'
                                , location=['form', 'json'])
+        self.reqparse.add_argument('username', required=True, help='User name is required'
+                               , location=['form', 'json'])
 
     def post(self):
         args = self.reqparse.parse_args()
         d = json.loads(args.addsensors)
+        result=[]
         for sensors in d:
             if(sensors.get('count') == 0):
                 continue
             count = sensors.get('count')
-            print(type(count))
+            type = sensors.get('type')
+            individual_instance={}
             try:
                 instances = [instance.id for instance in ec2.create_instances(
-                    ImageId=args['imageId'], MinCount=1, MaxCount=1, InstanceType='t2.micro')]
-                return jsonify({'statusCode': 200, 'instanceids': instances})
-            except botocore.exceptions.ClientError as e:
-                return jsonify({'statusCode': 400, 'error': e.message})
-        '''
-            try:
-                print(args['imageId'])
-                instances = [instance.id for instance in ec2.create_instances(
-                    ImageId=args['imageId'], MinCount=1, MaxCount=1,
-                    InstanceType='t2.micro')]
-                for instance in instances:
-                    print(instance)
-            except botocore.exceptions.ClientError as e:
-                print(e)
-        '''
+                    ImageId=args['imageId'], MinCount=count, MaxCount=count, InstanceType='t2.micro')]
 
+                for instance in instances:
+                    print("Instance values:" + instance)
+                    object_values = {"username" : args.username, "SensorHubName": args.sensorhubname,
+                                      "SensorId" : instance, "SensorType": type }
+                    UserSensorHubDetails.create(**object_values)
+                    individual_instance['SensorId'] = instance
+                    individual_instance['SensorType'] = type
+                    result.append(individual_instance)
+            except botocore.exceptions.ClientError as e:
+                return jsonify({'statusCode': 400, 'error': e})
+        return jsonify({'statusCode': 200, 'instanceDetails' :result})
 
 aws_api = Blueprint('endpoints.aws', __name__)
 api = Api(aws_api)
