@@ -2,6 +2,7 @@ import boto3
 import botocore.exceptions
 import json
 from datetime import datetime
+from dateutil import parser
 
 
 from flask import Blueprint, jsonify
@@ -110,31 +111,100 @@ class createSensorHub(Resource):
 
 class getMonitoringInfo(Resource):
 
-    ''' This resource is used for starting, stopping and terminating Instance/S
-        pass list or tuple like -> ids = ['instance-id-1', 'instance-id-2', ...] '''
+    ''' This resource is used for monitoring the instances using various metrics '''
 
     def __init__(self):
         self.reqparse = reqparse.RequestParser()
         self.reqparse.add_argument('sensorid', required=True, help='sensorid id required'
                                    , location=['form', 'json'])
+        self.reqparse.add_argument('startDate', required=True, help='startDate  required'
+                                   , location=['form', 'json'])
+        self.reqparse.add_argument('endDate', required=True, help='endDate required'
+                                   , location=['form', 'json'])
 
     def post(self):
         args = self.reqparse.parse_args()
 
+        #to get the status of the instance
         val=ec2.Instance(args['sensorid']);
-        metricsVal = client.get_metric_statistics(Namespace='AWS/EC2',MetricName='CPUUtilization',
+
+
+        #get the cpu utilization
+        cpuUtilizationMet = client.get_metric_statistics(Namespace='AWS/EC2',MetricName='CPUUtilization',
                                                   Dimensions=[{'Name': 'InstanceId', 'Value': args.sensorid}],
-                                                  StartTime=datetime(2016, 11, 15),
-                                                  EndTime=datetime(2016, 11, 17),
+                                                  StartTime=parser.parse(args.startDate),
+                                                  EndTime=parser.parse(args.endDate),
                                                   Period=86400,
                                                   Statistics=[
                                                       'Average'
                                                   ]
                                                   )
-        print(type(metricsVal))
-        print(metricsVal)
 
-        return jsonify({'statusCode': 200, 'state': val.state,'metricsVal' : metricsVal})
+        # get the cpu credit usage
+        cpuCreditUsageMet = client.get_metric_statistics(Namespace='AWS/EC2', MetricName='CPUCreditUsage',
+                                                         Dimensions=[{'Name': 'InstanceId', 'Value': args.sensorid}],
+                                                         StartTime=parser.parse(args.startDate),
+                                                         EndTime=parser.parse(args.endDate),
+                                                         Period=86400,
+                                                         Statistics=[
+                                                             'Average'
+                                                         ]
+                                                         )
+
+        # get the disk read operation usage
+        diskReadOpsMet = client.get_metric_statistics(Namespace='AWS/EC2', MetricName='DiskReadOps',
+                                                         Dimensions=[{'Name': 'InstanceId', 'Value': args.sensorid}],
+                                                         StartTime=parser.parse(args.startDate),
+                                                         EndTime=parser.parse(args.endDate),
+                                                         Period=86400,
+                                                         Statistics=[
+                                                             'Average'
+                                                         ]
+                                                         )
+
+        # get the disk write operation usage
+        diskWriteOpsMet = client.get_metric_statistics(Namespace='AWS/EC2', MetricName='DiskWriteOps',
+                                                      Dimensions=[{'Name': 'InstanceId', 'Value': args.sensorid}],
+                                                      StartTime=parser.parse(args.startDate),
+                                                      EndTime=parser.parse(args.endDate),
+                                                      Period=86400,
+                                                      Statistics=[
+                                                          'Average'
+                                                      ]
+                                                      )
+
+        # get the disk write operation usage
+        networkInMet = client.get_metric_statistics(Namespace='AWS/EC2', MetricName='NetworkIn',
+                                                       Dimensions=[{'Name': 'InstanceId', 'Value': args.sensorid}],
+                                                       StartTime=parser.parse(args.startDate),
+                                                       EndTime=parser.parse(args.endDate),
+                                                       Period=86400,
+                                                       Statistics=[
+                                                           'Average'
+                                                       ]
+                                                       )
+
+        # get the disk write operation usage
+        networkOutMet = client.get_metric_statistics(Namespace='AWS/EC2', MetricName='NetworkOut',
+                                                       Dimensions=[{'Name': 'InstanceId', 'Value': args.sensorid}],
+                                                       StartTime=parser.parse(args.startDate),
+                                                       EndTime=parser.parse(args.endDate),
+                                                       Period=86400,
+                                                       Statistics=[
+                                                           'Average'
+                                                       ]
+                                                       )
+
+        return jsonify({'statusCode': 200,
+                        'sensorid' : args.sensorid,
+                        'state': val.state,
+                        'cpuUtilizationMet' : cpuUtilizationMet,
+                        'cpuCreditUsageMet' : cpuCreditUsageMet,
+                        'diskReadOpsMet' : diskReadOpsMet,
+                        'diskWriteOpsMet' : diskWriteOpsMet,
+                        'networkInMet' : networkInMet,
+                        'networkOutMet' : networkOutMet
+                        })
 
 aws_api = Blueprint('endpoints.aws', __name__)
 api = Api(aws_api)
