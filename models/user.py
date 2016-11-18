@@ -2,7 +2,7 @@ import pymysql, os
 
 from peewee import *
 
-DATABASE = MySQLDatabase('infraSense-dev', user='root', passwd='mad', host='127.0.0.1', port=3306)
+DATABASE = MySQLDatabase('infraSense-dev', user='root', passwd='root', host='127.0.0.1', port=3306)
 
 
 class User(Model):
