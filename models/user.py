@@ -21,6 +21,7 @@ class UserSensorHubDetails(Model):
     SensorHubName = CharField(max_length=40)
     SensorId = CharField(unique=True)
     SensorType = CharField(max_length=40)
+    Status = CharField(max_length=40)
 
     class Meta:
         database = DATABASE

@@ -44,8 +44,41 @@ class Start(Resource):
     def post(self):
         args = self.reqparse.parse_args()
         val = ec2.instances.filter(InstanceIds=[args['instanceid']]).start()
-        print(val)
+        return jsonify({'statusCode': 200, 'result': val})
         # ec2.instances.filter(InstanceIds=ids).terminate()
+
+class Stop(Resource):
+
+    ''' This resource is used for starting, stopping and terminating Instance/S
+        pass list or tuple like -> ids = ['instance-id-1', 'instance-id-2', ...] '''
+
+    def __init__(self):
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument('instanceid', required=True, help='instance id required'
+                                   , location=['form', 'json'])
+
+    def post(self):
+        args = self.reqparse.parse_args()
+        print(args.instanceid);
+        val = ec2.instances.filter(InstanceIds=[args['instanceid']]).stop()
+        return jsonify({'statusCode': 200, 'result': val})
+        # ec2.instances.filter(InstanceIds=ids).terminate()
+
+class Terminate(Resource):
+
+    ''' This resource is used for starting, stopping and terminating Instance/S
+        pass list or tuple like -> ids = ['instance-id-1', 'instance-id-2', ...] '''
+
+    def __init__(self):
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument('instanceid', required=True, help='instance id required'
+                                   , location=['form', 'json'])
+
+    def post(self):
+        args = self.reqparse.parse_args()
+        print(args.instanceid);
+        val = ec2.instances.filter(InstanceIds=[args['instanceid']]).terminate()
+        return jsonify({'statusCode': 200, 'result': val})
 
 class Active(Resource):
 
@@ -99,7 +132,7 @@ class createSensorHub(Resource):
                 for instance in instances:
                     print("Instance values:" + instance)
                     object_values = {"username" : args.username, "SensorHubName": args.sensorhubname,
-                                      "SensorId" : instance, "SensorType": type }
+                                      "SensorId" : instance, "SensorType": type, "Status": "running" }
                     UserSensorHubDetails.create(**object_values)
                     individual_instance['SensorId'] = instance
                     individual_instance['SensorType'] = type
@@ -212,5 +245,7 @@ api.add_resource(Create, '/api/v1/create', endpoint='createinstance')
 api.add_resource(Active, '/api/v1/active', endpoint='activeinstances')
 api.add_resource(Health, '/api/v1/health', endpoint='instancehealth')
 api.add_resource(Start, '/api/v1/start', endpoint='start')
+api.add_resource(Stop, '/api/v1/stop', endpoint='stop')
+api.add_resource(Terminate, '/api/v1/terminate', endpoint='terminate')
 api.add_resource(createSensorHub, '/api/v1/createSensorHub', endpoint='createSensorHub')
 api.add_resource(getMonitoringInfo, '/api/v1/getMonitoringInfo', endpoint='getMonitoringInfo')
