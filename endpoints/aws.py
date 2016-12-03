@@ -167,7 +167,7 @@ class createSensorHub(Resource):
 
 class addToSensorHub(Resource):
 
-    ''' This is resource is for creating or launching New Instances'''
+    ''' This is resource is for adding new sensor Instances to the sensorHub'''
     def __init__(self):
         self.reqparse = reqparse.RequestParser()
         self.reqparse.add_argument('sensorhubname', required=True, help='sensor hub name required'
@@ -180,22 +180,25 @@ class addToSensorHub(Resource):
                                , location=['form', 'json'])
         self.reqparse.add_argument('count', required=True, help='count is required'
                                , location=['form', 'json'])
+
     def post(self):
         args = self.reqparse.parse_args()
         count_instances = 0
-        individual_instance = {}
         result=[]
+
+        count = int(args['count'])
         try:
             instances = [instance.id for instance in ec2.create_instances(
-                ImageId=args['imageId'], MinCount=args.count, MaxCount=args.count, InstanceType='t2.micro')]
+                ImageId=args['imageId'], MinCount=count, MaxCount=count, InstanceType='t2.micro')]
 
             for instance in instances:
                 print("Instance values:" + instance)
+                individual_instance = {}
                 sensor_values = {"UserName": args.username, "SensorHubName": args.sensorhubname,
-                                 "SensorId": instance, "SensorType": args.sensorType, "Status": "running"}
+                                 "SensorId": instance, "SensorType": args['sensorType'], "Status": "running"}
                 Sensor.create(**sensor_values)
                 individual_instance['SensorId'] = instance
-                individual_instance['SensorType'] = type
+                individual_instance['SensorType'] = args['sensorType']
                 individual_instance['sensorhubname'] = args['sensorhubname']
                 count_instances = count_instances + 1
                 individual_instance['index'] = count_instances
@@ -203,6 +206,46 @@ class addToSensorHub(Resource):
         except botocore.exceptions.ClientError as e:
             return jsonify({'statusCode': 400, 'error': e})
 
+        return jsonify({'statusCode': 200, 'instanceDetails': result})
+
+class deleteFromSensorHub(Resource):
+
+    ''' This is resource is for adding new sensor Instances to the sensorHub'''
+    def __init__(self):
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument('sensorhubname', required=True, help='sensor hub name required'
+                               , location=['form', 'json'])
+        self.reqparse.add_argument('sensorType', required=True, help='sensor type info is required'
+                               , location=['form', 'json'])
+        self.reqparse.add_argument('imageId', required=True, help='Image Id is required'
+                               , location=['form', 'json'])
+        self.reqparse.add_argument('username', required=True, help='User name is required'
+                               , location=['form', 'json'])
+        self.reqparse.add_argument('count', required=True, help='count is required'
+                               , location=['form', 'json'])
+
+    def post(self):
+        args = self.reqparse.parse_args()
+        count_instances = 0
+        result=[]
+        query = Sensor.select().where(Sensor.SensorHubName == args['sensorhubname'] and
+                                                             Sensor.SensorType == args['sensorType'] and
+                                                             Sensor.UserName == args['username'] and
+                                                             Sensor.Status != 'terminated').limit(args['count'])
+        sensorInfo = query.execute()
+
+        for sensor in sensorInfo:
+            individual_instance = {}
+            val = ec2.instances.filter(InstanceIds=[sensor.SensorId]).terminate()
+            q = Sensor.update(Status='terminated').where(Sensor.SensorId == sensor.SensorId)
+            q.execute()
+            print("The following sensor " + sensor.SensorId + " is deleted successfully")
+            individual_instance['SensorId'] = sensor.SensorId
+            individual_instance['SensorType'] = args['sensorType']
+            individual_instance['sensorhubname'] = args['sensorhubname']
+            count_instances = count_instances + 1
+            individual_instance['index'] = count_instances
+            result.append(individual_instance)
         return jsonify({'statusCode': 200, 'instanceDetails': result})
 
 class getMonitoringInfo(Resource):
@@ -286,6 +329,7 @@ class getMonitoringInfo(Resource):
 
 aws_api = Blueprint('endpoints.aws', __name__)
 api = Api(aws_api)
+
 api.add_resource(Create, '/api/v1/create', endpoint='createinstance')
 api.add_resource(Active, '/api/v1/active', endpoint='activeinstances')
 api.add_resource(Health, '/api/v1/health', endpoint='instancehealth')
@@ -294,4 +338,5 @@ api.add_resource(Stop, '/api/v1/stop', endpoint='stop')
 api.add_resource(Terminate, '/api/v1/terminate', endpoint='terminate')
 api.add_resource(createSensorHub, '/api/v1/createSensorHub', endpoint='createSensorHub')
 api.add_resource(getMonitoringInfo, '/api/v1/getMonitoringInfo', endpoint='getMonitoringInfo')
-api.add_resource(addToSensorHub, '/api/vi/addToSensorHub', endpoint='addToSensorHub')
+api.add_resource(addToSensorHub, '/api/v1/addToSensorHub', endpoint='addToSensorHub')
+api.add_resource(deleteFromSensorHub, '/api/v1/deleteFromSensorHub', endpoint='deleteFromSensorHub')
