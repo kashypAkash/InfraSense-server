@@ -2,7 +2,7 @@ import pymysql, os
 
 from peewee import *
 
-DATABASE = MySQLDatabase('infraSense-dev', user='root', passwd='', host='127.0.0.1', port=3306)
+DATABASE = MySQLDatabase('infraSense-dev', user='root', passwd='root', host='127.0.0.1', port=3306)
 
 class Admin(Model):
     UserName = CharField(unique=True)
@@ -16,6 +16,7 @@ class User(Model):
     """A base model that will use our MySQL database"""
     UserName = CharField(unique=True)
     Password = CharField(max_length=40)
+    EmailId = CharField(unique=True)
 
     class Meta:
         database = DATABASE
