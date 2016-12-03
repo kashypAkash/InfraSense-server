@@ -258,8 +258,6 @@ class getMonitoringInfo(Resource):
                                    , location=['form', 'json'])
         self.reqparse.add_argument('startDate', required=True, help='startDate  required'
                                    , location=['form', 'json'])
-        self.reqparse.add_argument('endDate', required=True, help='endDate required'
-                                   , location=['form', 'json'])
 
     def post(self):
         args = self.reqparse.parse_args()
@@ -318,6 +316,7 @@ class getMonitoringInfo(Resource):
             statusCode = 202
         elif (val.state['Name'] != 'running'):
             statusCode = 203
+        print(cpuutilisationAverage)
         return jsonify({'statusCode': statusCode,
                         'sensorid': args.sensorid,
                         'launchtime':val.launch_time,
