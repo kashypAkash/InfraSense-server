@@ -7,6 +7,7 @@ from dateutil import parser
 
 from flask import Blueprint, jsonify
 from flask_restful import Resource, Api, reqparse
+from models.user import *
 from models.user import UserSensorHubDetails
 from flask_cors import cross_origin
 # Creating the Connection
@@ -116,12 +117,15 @@ class createSensorHub(Resource):
                                , location=['form', 'json'])
 
     def post(self):
+        sensorHubRequired = 0;
         args = self.reqparse.parse_args()
         d = json.loads(args.addsensors)
         result=[]
+        count_instances = 0
         for sensors in d:
             if(sensors.get('count') == 0):
                 continue
+            sensorHubRequired = 1
             count = sensors.get('count')
             type = sensors.get('type')
             individual_instance={}
@@ -131,14 +135,25 @@ class createSensorHub(Resource):
 
                 for instance in instances:
                     print("Instance values:" + instance)
+                    sensor_values = {"UserName": args.username, "SensorHubName": args.sensorhubname,
+                                     "SensorId": instance, "SensorType": type, "Status": "running"}
                     object_values = {"username" : args.username, "SensorHubName": args.sensorhubname,
                                       "SensorId" : instance, "SensorType": type, "Status": "running" }
-                    UserSensorHubDetails.create(**object_values)
+                   # UserSensorHubDetails.create(**object_values)
+                    Sensor.create(**sensor_values)
                     individual_instance['SensorId'] = instance
                     individual_instance['SensorType'] = type
+                    individual_instance['sensorhubname'] = args['sensorhubname']
+                    count_instances = count_instances + 1
+                    individual_instance['index'] = count_instances
                     result.append(individual_instance)
             except botocore.exceptions.ClientError as e:
                 return jsonify({'statusCode': 400, 'error': e})
+
+        if(sensorHubRequired == 1):
+            sensorHub_Values = {"UserName": args.username, "SensorHubName": args.sensorhubname, "Status": "running"}
+            SensorCluster.create(**sensorHub_Values)
+
         return jsonify({'statusCode': 200, 'instanceDetails' :result})
 
 
