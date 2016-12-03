@@ -343,6 +343,33 @@ class getMonitoringInfo(Resource):
                         'networkOutMet' : networkOutMet
                         })
 
+
+class getUserSensorDetails(Resource):
+
+    ''' This is resource is for adding new sensor Instances to the sensorHub'''
+    def __init__(self):
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument('username', required=True, help='User name is required'
+                               , location=['form', 'json'])
+
+    def post(self):
+        args = self.reqparse.parse_args()
+        count_instances = 0
+        result=[]
+        query = Sensor.select().where(Sensor.UserName == args['username'])
+        sensorInfo = query.execute()
+
+        for sensor in sensorInfo:
+            individual_instance = {}
+            individual_instance['SensorId'] = sensor.SensorId
+            individual_instance['SensorType'] = sensor.SensorType
+            individual_instance['SensorHubName'] = sensor.SensorHubName
+            individual_instance['Status'] = sensor.Status
+            count_instances = count_instances + 1
+            individual_instance['index'] = count_instances
+            result.append(individual_instance)
+        return jsonify({'statusCode': 200, 'instanceDetails': result})
+
 aws_api = Blueprint('endpoints.aws', __name__)
 api = Api(aws_api)
 
@@ -356,3 +383,4 @@ api.add_resource(createSensorHub, '/api/v1/createSensorHub', endpoint='createSen
 api.add_resource(getMonitoringInfo, '/api/v1/getMonitoringInfo', endpoint='getMonitoringInfo')
 api.add_resource(addToSensorHub, '/api/v1/addToSensorHub', endpoint='addToSensorHub')
 api.add_resource(deleteFromSensorHub, '/api/v1/deleteFromSensorHub', endpoint='deleteFromSensorHub')
+api.add_resource(getUserSensorDetails, '/api/v1/getUserSensorDetails', endpoint='getUserSensorDetails')
