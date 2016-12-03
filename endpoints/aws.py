@@ -1,7 +1,9 @@
 import boto3
 import botocore.exceptions
 import json
-from datetime import datetime
+from datetime import datetime, date
+from datetime import timedelta
+from datetime import timezone
 from dateutil import parser
 
 
@@ -161,82 +163,64 @@ class getMonitoringInfo(Resource):
         #to get the status of the instance
         val=ec2.Instance(args['sensorid']);
 
+        statusCode = 0
+        cpuutilisationAverage = 0
+        networkInAverage = 0
+        networkoutAverage = 0
 
-        #get the cpu utilization
-        cpuUtilizationMet = client.get_metric_statistics(Namespace='AWS/EC2',MetricName='CPUUtilization',
-                                                  Dimensions=[{'Name': 'InstanceId', 'Value': args.sensorid}],
-                                                  StartTime=parser.parse(args.startDate),
-                                                  EndTime=parser.parse(args.endDate),
-                                                  Period=86400,
-                                                  Statistics=[
-                                                      'Average'
-                                                  ]
-                                                  )
 
-        # get the cpu credit usage
-        cpuCreditUsageMet = client.get_metric_statistics(Namespace='AWS/EC2', MetricName='CPUCreditUsage',
+        if (val.launch_time < parser.parse(args.startDate) and parser.parse(args.startDate) <= datetime.now(timezone.utc) and val.state['Name'] == 'running'):
+            statusCode = 200
+            # get the cpu utilization
+            cpuUtilizationMet = client.get_metric_statistics(Namespace='AWS/EC2', MetricName='CPUUtilization',
                                                          Dimensions=[{'Name': 'InstanceId', 'Value': args.sensorid}],
                                                          StartTime=parser.parse(args.startDate),
-                                                         EndTime=parser.parse(args.endDate),
+                                                         EndTime=parser.parse(args.startDate) + timedelta(days=1),
                                                          Period=86400,
                                                          Statistics=[
                                                              'Average'
                                                          ]
                                                          )
+            cpuutilisationAverage = cpuUtilizationMet['Datapoints'][0]['Average']
 
-        # get the disk read operation usage
-        diskReadOpsMet = client.get_metric_statistics(Namespace='AWS/EC2', MetricName='DiskReadOps',
-                                                         Dimensions=[{'Name': 'InstanceId', 'Value': args.sensorid}],
-                                                         StartTime=parser.parse(args.startDate),
-                                                         EndTime=parser.parse(args.endDate),
-                                                         Period=86400,
-                                                         Statistics=[
-                                                             'Average'
-                                                         ]
-                                                         )
+            # get the disk write operation usage
+            networkInMet = client.get_metric_statistics(Namespace='AWS/EC2', MetricName='NetworkIn',
+                                                    Dimensions=[{'Name': 'InstanceId', 'Value': args.sensorid}],
+                                                    StartTime=parser.parse(args.startDate),
+                                                    EndTime=parser.parse(args.startDate) + timedelta(days=1),
+                                                    Period=86400,
+                                                    Statistics=[
+                                                        'Average'
+                                                    ]
+                                                    )
 
-        # get the disk write operation usage
-        diskWriteOpsMet = client.get_metric_statistics(Namespace='AWS/EC2', MetricName='DiskWriteOps',
-                                                      Dimensions=[{'Name': 'InstanceId', 'Value': args.sensorid}],
-                                                      StartTime=parser.parse(args.startDate),
-                                                      EndTime=parser.parse(args.endDate),
-                                                      Period=86400,
-                                                      Statistics=[
-                                                          'Average'
-                                                      ]
-                                                      )
+            networkInAverage = networkInMet['Datapoints'][0]['Average']
 
-        # get the disk write operation usage
-        networkInMet = client.get_metric_statistics(Namespace='AWS/EC2', MetricName='NetworkIn',
-                                                       Dimensions=[{'Name': 'InstanceId', 'Value': args.sensorid}],
-                                                       StartTime=parser.parse(args.startDate),
-                                                       EndTime=parser.parse(args.endDate),
-                                                       Period=86400,
-                                                       Statistics=[
-                                                           'Average'
-                                                       ]
-                                                       )
+            # get the disk write operation usage
+            networkOutMet = client.get_metric_statistics(Namespace='AWS/EC2', MetricName='NetworkOut',
+                                                     Dimensions=[{'Name': 'InstanceId', 'Value': args.sensorid}],
+                                                     StartTime=parser.parse(args.startDate),
+                                                     EndTime=parser.parse(args.startDate) + timedelta(days=1),
+                                                     Period=86400,
+                                                     Statistics=[
+                                                         'Average'
+                                                     ]
+                                                     )
 
-        # get the disk write operation usage
-        networkOutMet = client.get_metric_statistics(Namespace='AWS/EC2', MetricName='NetworkOut',
-                                                       Dimensions=[{'Name': 'InstanceId', 'Value': args.sensorid}],
-                                                       StartTime=parser.parse(args.startDate),
-                                                       EndTime=parser.parse(args.endDate),
-                                                       Period=86400,
-                                                       Statistics=[
-                                                           'Average'
-                                                       ]
-                                                       )
-
-        return jsonify({'statusCode': 200,
-                        'sensorid' : args.sensorid,
+            networkoutAverage = networkOutMet['Datapoints'][0]['Average']
+        elif (val.launch_time > parser.parse(args.startDate)):
+            statusCode = 201
+        elif (parser.parse(args.startDate) > datetime.now(timezone.utc)):
+            statusCode = 202
+        elif (val.state['Name'] != 'running'):
+            statusCode = 203
+        return jsonify({'statusCode': statusCode,
+                        'sensorid': args.sensorid,
+                        'launchtime':val.launch_time,
                         'state': val.state,
-                        'cpuUtilizationMet' : cpuUtilizationMet,
-                        'cpuCreditUsageMet' : cpuCreditUsageMet,
-                        'diskReadOpsMet' : diskReadOpsMet,
-                        'diskWriteOpsMet' : diskWriteOpsMet,
-                        'networkInMet' : networkInMet,
-                        'networkOutMet' : networkOutMet
+                        'cpuutilisationAverage': cpuutilisationAverage,
+                        'networkInAverage': networkInAverage,
+                        'networkoutAverage': networkoutAverage
                         })
 
 aws_api = Blueprint('endpoints.aws', __name__)
