@@ -8,6 +8,7 @@ from dateutil import parser
 from flask import Blueprint, jsonify
 from flask_restful import Resource, Api, reqparse
 from models.user import *
+
 from models.user import UserSensorHubDetails
 from flask_cors import cross_origin
 # Creating the Connection
@@ -62,6 +63,8 @@ class Stop(Resource):
         args = self.reqparse.parse_args()
         print(args.instanceid);
         val = ec2.instances.filter(InstanceIds=[args['instanceid']]).stop()
+        q = Sensor.update(Status='stopped').where(Sensor.SensorId == args['instanceid'])
+        q.execute()
         return jsonify({'statusCode': 200, 'result': val})
         # ec2.instances.filter(InstanceIds=ids).terminate()
 
@@ -79,6 +82,8 @@ class Terminate(Resource):
         args = self.reqparse.parse_args()
         print(args.instanceid);
         val = ec2.instances.filter(InstanceIds=[args['instanceid']]).terminate()
+        q = Sensor.update(Status='terminated').where(Sensor.SensorId == args['instanceid'])
+        q.execute()
         return jsonify({'statusCode': 200, 'result': val})
 
 class Active(Resource):
