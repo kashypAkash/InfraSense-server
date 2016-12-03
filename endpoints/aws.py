@@ -9,6 +9,8 @@ from dateutil import parser
 
 from flask import Blueprint, jsonify
 from flask_restful import Resource, Api, reqparse
+from models.user import *
+
 from models.user import UserSensorHubDetails
 from flask_cors import cross_origin
 # Creating the Connection
@@ -31,6 +33,7 @@ class Create(Resource):
             return jsonify({'statusCode':200,'instanceids':instances})
         except botocore.exceptions.ClientError as e:
             return jsonify({'statusCode':400,'error':e.message})
+
 
 
 class Start(Resource):
@@ -63,6 +66,8 @@ class Stop(Resource):
         args = self.reqparse.parse_args()
         print(args.instanceid);
         val = ec2.instances.filter(InstanceIds=[args['instanceid']]).stop()
+        q = Sensor.update(Status='stopped').where(Sensor.SensorId == args['instanceid'])
+        q.execute()
         return jsonify({'statusCode': 200, 'result': val})
         # ec2.instances.filter(InstanceIds=ids).terminate()
 
@@ -80,6 +85,8 @@ class Terminate(Resource):
         args = self.reqparse.parse_args()
         print(args.instanceid);
         val = ec2.instances.filter(InstanceIds=[args['instanceid']]).terminate()
+        q = Sensor.update(Status='terminated').where(Sensor.SensorId == args['instanceid'])
+        q.execute()
         return jsonify({'statusCode': 200, 'result': val})
 
 class Active(Resource):
@@ -103,6 +110,7 @@ class Health(Resource):
             print(status)
 
 
+
 class createSensorHub(Resource):
 
     '''This resource is used for Checking Health Status Of Instances'''
@@ -118,12 +126,15 @@ class createSensorHub(Resource):
                                , location=['form', 'json'])
 
     def post(self):
+        sensorHubRequired = 0;
         args = self.reqparse.parse_args()
         d = json.loads(args.addsensors)
         result=[]
+        count_instances = 0
         for sensors in d:
             if(sensors.get('count') == 0):
                 continue
+            sensorHubRequired = 1
             count = sensors.get('count')
             type = sensors.get('type')
             individual_instance={}
@@ -133,16 +144,66 @@ class createSensorHub(Resource):
 
                 for instance in instances:
                     print("Instance values:" + instance)
+                    sensor_values = {"UserName": args.username, "SensorHubName": args.sensorhubname,
+                                     "SensorId": instance, "SensorType": type, "Status": "running"}
                     object_values = {"username" : args.username, "SensorHubName": args.sensorhubname,
                                       "SensorId" : instance, "SensorType": type, "Status": "running" }
-                    UserSensorHubDetails.create(**object_values)
+                   # UserSensorHubDetails.create(**object_values)
+                    Sensor.create(**sensor_values)
                     individual_instance['SensorId'] = instance
                     individual_instance['SensorType'] = type
+                    individual_instance['sensorhubname'] = args['sensorhubname']
+                    count_instances = count_instances + 1
+                    individual_instance['index'] = count_instances
                     result.append(individual_instance)
             except botocore.exceptions.ClientError as e:
                 return jsonify({'statusCode': 400, 'error': e})
+
+        if(sensorHubRequired == 1):
+            sensorHub_Values = {"UserName": args.username, "SensorHubName": args.sensorhubname, "Status": "running"}
+            SensorCluster.create(**sensorHub_Values)
+
         return jsonify({'statusCode': 200, 'instanceDetails' :result})
 
+class addToSensorHub(Resource):
+
+    ''' This is resource is for creating or launching New Instances'''
+    def __init__(self):
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument('sensorhubname', required=True, help='sensor hub name required'
+                               , location=['form', 'json'])
+        self.reqparse.add_argument('sensorType', required=True, help='sensor type info is required'
+                               , location=['form', 'json'])
+        self.reqparse.add_argument('imageId', required=True, help='Image Id is required'
+                               , location=['form', 'json'])
+        self.reqparse.add_argument('username', required=True, help='User name is required'
+                               , location=['form', 'json'])
+        self.reqparse.add_argument('count', required=True, help='count is required'
+                               , location=['form', 'json'])
+    def post(self):
+        args = self.reqparse.parse_args()
+        count_instances = 0
+        individual_instance = {}
+        result=[]
+        try:
+            instances = [instance.id for instance in ec2.create_instances(
+                ImageId=args['imageId'], MinCount=args.count, MaxCount=args.count, InstanceType='t2.micro')]
+
+            for instance in instances:
+                print("Instance values:" + instance)
+                sensor_values = {"UserName": args.username, "SensorHubName": args.sensorhubname,
+                                 "SensorId": instance, "SensorType": args.sensorType, "Status": "running"}
+                Sensor.create(**sensor_values)
+                individual_instance['SensorId'] = instance
+                individual_instance['SensorType'] = type
+                individual_instance['sensorhubname'] = args['sensorhubname']
+                count_instances = count_instances + 1
+                individual_instance['index'] = count_instances
+                result.append(individual_instance)
+        except botocore.exceptions.ClientError as e:
+            return jsonify({'statusCode': 400, 'error': e})
+
+        return jsonify({'statusCode': 200, 'instanceDetails': result})
 
 class getMonitoringInfo(Resource):
 
@@ -233,3 +294,4 @@ api.add_resource(Stop, '/api/v1/stop', endpoint='stop')
 api.add_resource(Terminate, '/api/v1/terminate', endpoint='terminate')
 api.add_resource(createSensorHub, '/api/v1/createSensorHub', endpoint='createSensorHub')
 api.add_resource(getMonitoringInfo, '/api/v1/getMonitoringInfo', endpoint='getMonitoringInfo')
+api.add_resource(addToSensorHub, '/api/vi/addToSensorHub', endpoint='addToSensorHub')

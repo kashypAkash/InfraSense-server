@@ -21,7 +21,7 @@ class Login(Resource):
         args = self.reqparse.parse_args()
         print(args)
         try:
-           if User.get(User.username == args['username']).password == args['password']:
+           if User.get(User.UserName == args['username']).Password == args['password']:
                return jsonify({'statusCode':200,'username':args['username']})
            else:
                return jsonify({'statusCode':400})
