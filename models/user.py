@@ -5,6 +5,7 @@ from peewee import *
 DATABASE = MySQLDatabase(os.environ['dbdatabase'], user=os.environ['dbuser'], passwd=os.environ['dbpassword'], host=os.environ['dbhost'], port=3306)
 #DATABASE = MySQLDatabase('infraSense-dev', user='root', passwd='tushara', host='127.0.0.1', port=3306)
 
+#DATABASE = MySQLDatabase('infraSense-dev', user='root', passwd='Chandana13', host='127.0.0.1', port=3306)
 class Admin(Model):
     UserName = CharField(unique=True)
     EmailId = CharField(unique=True)
@@ -26,7 +27,7 @@ class User(Model):
 class SensorDetails(Model):
     SensorType = CharField(max_length=20)
     Region = CharField(max_length=20)
-    ChargePerHour = FloatField(default=0)
+    ChargePerHour = DecimalField(decimal_places=2)
 
     class Meta:
         database = DATABASE
@@ -45,6 +46,9 @@ class Sensor(Model):
     SensorId = CharField(unique=True)
     SensorType = CharField(max_length=40)
     Status = CharField(max_length=40)
+    StartTime = DateTimeField(null=True)
+    StopTime = DateTimeField(null=True)
+    ActiveHours = DecimalField(decimal_places=1, default=0.0, null=True)
 
     class Meta:
         database = DATABASE
@@ -60,7 +64,16 @@ class UserSensorHubDetails(Model):
     class Meta:
         database = DATABASE
 
+class SensorData(Model):
+    """A base model that will use our MySQL database"""
+    SensorId = CharField()
+    Data = DecimalField(decimal_places=2)
+    TimeStamp = DateTimeField()
+
+    class Meta:
+        database = DATABASE
+
 def initialize():
     DATABASE.connect()
-    DATABASE.create_tables([Admin, User, SensorDetails, SensorCluster, Sensor, UserSensorHubDetails ],safe=True)
+    DATABASE.create_tables([Admin, User, SensorDetails, SensorCluster, Sensor, UserSensorHubDetails, SensorData ],safe=True)
 
