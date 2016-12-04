@@ -45,7 +45,7 @@ class Sensor(Model):
     Status = CharField(max_length=40)
     StartTime = DateTimeField(null=True)
     StopTime = DateTimeField(null=True)
-    ActiveHours = DecimalField(decimal_places=1, default=0.0)
+    ActiveHours = DecimalField(decimal_places=1, default=0.0, null=True)
 
     class Meta:
         database = DATABASE
