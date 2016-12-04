@@ -55,13 +55,10 @@ class Register(Resource):
         self.reqparse.add_argument('Password', required=True, help='password is required', location=['form','json'])
         self.reqparse.add_argument('EmailId', required=True, help='email is required', location=['form','json'])
 
-    @marshal_with(user_fields)
     def post(self):
         args = self.reqparse.parse_args()
-        print(args)
-        temp_user = User.create(**args)
-
-        return jsonify({'statusCode':200,'user':user})
+        User.create(**args)
+        return jsonify({'statusCode': 200, 'result': 'success'})
 
 class GetSensorInfo(Resource):
     def __init__(self):
