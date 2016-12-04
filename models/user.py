@@ -2,7 +2,7 @@ import pymysql, os
 
 from peewee import *
 
-DATABASE = MySQLDatabase('infraSense-dev', user='root', passwd='', host='127.0.0.1', port=3306)
+DATABASE = MySQLDatabase(os.environ['database'], user=os.environ['user'], passwd=os.environ['password'], host=os.environ['host'], port=3306)
 
 class Admin(Model):
     UserName = CharField(unique=True)
