@@ -27,7 +27,7 @@ class User(Model):
 class SensorDetails(Model):
     SensorType = CharField(max_length=20)
     Region = CharField(max_length=20)
-    ChargePerHour = DecimalField(decimal_places=2)
+    ChargePerHour = FloatField(default=0.0)
 
     class Meta:
         database = DATABASE

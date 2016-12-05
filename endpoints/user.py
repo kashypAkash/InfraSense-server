@@ -20,8 +20,11 @@ class Login(Resource):
         args = self.reqparse.parse_args()
         print(args)
         try:
-           if User.get(User.UserName == args['username']).Password == args['password']:
+           if User.get(User.UserName == args['username']).Password == args['password'] and User.get(User.UserName == args['username']).Active == 'Active':
                return jsonify({'statusCode':200,'username':args['username']})
+           elif  User.get(User.UserName == args['username']).Password == args['password'] and User.get(User.UserName == args['username']).Active == 'Deactivated':
+               print('Entered')
+               return jsonify({'statusCode': 202})
            else:
                return jsonify({'statusCode':400})
         except DoesNotExist:

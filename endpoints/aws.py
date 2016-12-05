@@ -1,6 +1,7 @@
 import boto3
 import botocore.exceptions
 import json
+import time
 import random
 
 from datetime import datetime, date
@@ -273,6 +274,10 @@ class getMonitoringInfo(Resource):
         networkInAverage = 0
         networkoutAverage = 0
 
+        computeTime = time.mktime(val.launch_time.timetuple())
+        offset = datetime.fromtimestamp(computeTime) - datetime.utcfromtimestamp(computeTime)
+        res =  val.launch_time + offset
+        ltvar = res.strftime('%m/%d/%Y, %I:%M %p')
 
         if (val.launch_time < parser.parse(args.startDate) and parser.parse(args.startDate) <= datetime.now(timezone.utc) and val.state['Name'] == 'running'):
             statusCode = 200
@@ -324,16 +329,16 @@ class getMonitoringInfo(Resource):
                 cpuutilisationAverage = random.uniform(0.0100,0.0150)
                 networkInAverage = random.uniform(59.6200,63.8800)
                 networkoutAverage = random.uniform(29.9000,31.8800)
+        elif (val.state['Name'] != 'running'):
+            statusCode = 203
         elif (val.launch_time > parser.parse(args.startDate)):
             statusCode = 201
         elif (parser.parse(args.startDate) > datetime.now(timezone.utc)):
             statusCode = 202
-        elif (val.state['Name'] != 'running'):
-            statusCode = 203
-        print(cpuutilisationAverage)
+        print(val.launch_time)
         return jsonify({'statusCode': statusCode,
                         'sensorid': args.sensorid,
-                        'launchtime':val.launch_time,
+                        'launchtime':ltvar,
                         'state': val.state,
                         'cpuutilisationAverage': cpuutilisationAverage,
                         'networkInAverage': networkInAverage,
