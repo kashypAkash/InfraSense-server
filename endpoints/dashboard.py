@@ -150,16 +150,16 @@ class Activesensorsbyaccount(Resource):
         return jsonify({'statusCode':200, 'activesensors': sensors.count(),'result':result})
 
 
-class Pendingsensors(Resource):
+class Stoppedsensors(Resource):
 
     def get(self):
         sensors = Sensor.select().where(Sensor.Status == 'stopped')
         result =[ {'status':sensor.Status,'sensorid':sensor.SensorId, 'clustername':sensor.SensorHubName,
                'type':sensor.SensorType} for sensor in sensors]
 
-        return jsonify({'statusCode':200, 'pendingsensors': sensors.count(),'result':result})
+        return jsonify({'statusCode':200, 'stoppedsensors': sensors.count(),'result':result})
 
-class Pendingsensorsbyaccount(Resource):
+class Stoppedsensorsbyaccount(Resource):
     '''Fetch the pending sensor for a user'''
     def __init__(self):
         self.reqparse = reqparse.RequestParser()
@@ -171,7 +171,7 @@ class Pendingsensorsbyaccount(Resource):
         result =[ {'status':sensor.Status,'sensorid':sensor.SensorId, 'clustername':sensor.SensorHubName,
                    'type':sensor.SensorType} for sensor in sensors]
 
-        return jsonify({'statusCode':200, 'pendingsensors': sensors.count(),'result':result})
+        return jsonify({'statusCode':200, 'stoppedsensors': sensors.count(),'result':result})
 
 
 
@@ -214,7 +214,7 @@ api.add_resource(Totalsensors, '/api/v1/totalsensors', endpoint='totalsensors')
 api.add_resource(Totalclusters, '/api/v1/totalclusters', endpoint='totalclusters')
 api.add_resource(Sensorsbytype, '/api/v1/typecount', endpoint='sensorsbytype')
 api.add_resource(Activesensors, '/api/v1/activesensors', endpoint='activesensor')
-api.add_resource(Pendingsensors, '/api/v1/pendingsensors', endpoint='pendingsensors')
+api.add_resource(Stoppedsensors, '/api/v1/stoppedsensors', endpoint='stoppedsensors')
 api.add_resource(Terminatedsensors, '/api/v1/terminatedsensors', endpoint='terminatedsensors')
 api.add_resource(Sensorspercluster, '/api/v1/sensorspercluster', endpoint='sensorspercluster')
 
@@ -224,5 +224,5 @@ api.add_resource(Totalclusterbyaccount, '/api/v1/totalclusterbyaccount', endpoin
 api.add_resource(Sensorsbytypebyaccount, '/api/v1/typecountbyaccount', endpoint='sensorsbytypebyaccount')
 api.add_resource(Sensorsperclusterbyaccount, '/api/v1/sensorperclusterbyaccount', endpoint='sensorperclusterbyaccount')
 api.add_resource(Activesensorsbyaccount, '/api/v1/activesensorsbyaccount', endpoint='activesensorbyaccount')
-api.add_resource(Pendingsensorsbyaccount, '/api/v1/pendingsensorsbyaccount', endpoint='pendingsensorsbyaccount')
+api.add_resource(Stoppedsensorsbyaccount, '/api/v1/stoppedsensorsbyaccount', endpoint='stoppedsensorsbyaccount')
 api.add_resource(Terminatedsensorsbyaccount, '/api/v1/terminatedsensorsbyaccount', endpoint='terminatedsensorsbyaccount')
