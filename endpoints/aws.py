@@ -1,6 +1,7 @@
 import boto3
 import botocore.exceptions
 import json
+import datetime as dt
 import time
 import random
 
@@ -52,6 +53,8 @@ class Start(Resource):
     def post(self):
         args = self.reqparse.parse_args()
         val = ec2.instances.filter(InstanceIds=[args['instanceid']]).start()
+        q = Sensor.update(Status='running', StartTime = dt.datetime.now(), StopTime=None).where(Sensor.SensorId == args['instanceid'])
+        q.execute()
         return jsonify({'statusCode': 200, 'result': val})
         # ec2.instances.filter(InstanceIds=ids).terminate()
 
@@ -69,7 +72,13 @@ class Stop(Resource):
         args = self.reqparse.parse_args()
         print(args.instanceid);
         val = ec2.instances.filter(InstanceIds=[args['instanceid']]).stop()
-        q = Sensor.update(Status='stopped').where(Sensor.SensorId == args['instanceid'])
+        query = Sensor.select().where(Sensor.SensorId==args['instanceid'])
+        result = query.execute()
+        for r in result:
+            usage=dt.datetime.now()-r.StartTime
+            hours=(usage.seconds)/3600
+            activeHrs=r.ActiveHours+hours
+        q = Sensor.update(Status='stopped', StopTime=dt.datetime.now(), ActiveHours=round(activeHrs,1)).where(Sensor.SensorId == args['instanceid'])
         q.execute()
         return jsonify({'statusCode': 200, 'result': val})
         # ec2.instances.filter(InstanceIds=ids).terminate()
@@ -88,7 +97,16 @@ class Terminate(Resource):
         args = self.reqparse.parse_args()
         print(args.instanceid);
         val = ec2.instances.filter(InstanceIds=[args['instanceid']]).terminate()
-        q = Sensor.update(Status='terminated').where(Sensor.SensorId == args['instanceid'])
+        query = Sensor.select().where(Sensor.SensorId == args['instanceid'])
+        result = query.execute()
+        for r in result:
+            if(r.Status=='running'):
+                usage = dt.datetime.now() - r.StartTime
+                hours = (usage.seconds) / 3600
+                activeHrs = r.ActiveHours + hours
+                q = Sensor.update(Status='terminated', StopTime=dt.datetime.now(), ActiveHours=round(activeHrs, 1)).where(Sensor.SensorId == args['instanceid'])
+            elif(r.Status=='stopped'):
+                q = Sensor.update(Status='terminated', StopTime=dt.datetime.now()).where(Sensor.SensorId == args['instanceid'])
         q.execute()
         return jsonify({'statusCode': 200, 'result': val})
 
@@ -147,9 +165,9 @@ class createSensorHub(Resource):
                 for instance in instances:
                     individual_instance = {}
                     sensor_values = {"UserName": args.username, "SensorHubName": args.sensorhubname,
-                                     "SensorId": instance, "SensorType": type, "Status": "running"}
+                                     "SensorId": instance, "SensorType": type, "Status": "running", "StartTime":dt.datetime.now()}
                     object_values = {"username" : args.username, "SensorHubName": args.sensorhubname,
-                                      "SensorId" : instance, "SensorType": type, "Status": "running" }
+                                      "SensorId" : instance, "SensorType": type, "Status": "running", "StartTime":dt.datetime.now()}
                    # UserSensorHubDetails.create(**object_values)
                     Sensor.create(**sensor_values)
                     individual_instance['SensorId'] = instance
@@ -196,7 +214,7 @@ class addToSensorHub(Resource):
                 print("Instance values:" + instance)
                 individual_instance = {}
                 sensor_values = {"UserName": args.username, "SensorHubName": args.sensorhubname,
-                                 "SensorId": instance, "SensorType": args['sensorType'], "Status": "running"}
+                                 "SensorId": instance, "SensorType": args['sensorType'], "Status": "running", "StartTime":dt.datetime.now()}
                 Sensor.create(**sensor_values)
                 individual_instance['SensorId'] = instance
                 individual_instance['SensorType'] = args['sensorType']
@@ -238,7 +256,7 @@ class deleteFromSensorHub(Resource):
         for sensor in sensorInfo:
             individual_instance = {}
             val = ec2.instances.filter(InstanceIds=[sensor.SensorId]).terminate()
-            q = Sensor.update(Status='terminated').where(Sensor.SensorId == sensor.SensorId)
+            q = Sensor.update(Status='terminated', StopTime=dt.datetime.now()).where(Sensor.SensorId == sensor.SensorId)
             q.execute()
             print("The following sensor " + sensor.SensorId + " is deleted successfully")
             individual_instance['SensorId'] = sensor.SensorId
