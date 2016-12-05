@@ -13,10 +13,13 @@ app.register_blueprint(dashboard_api)
 
 CORS(app, resources={r"/*": {"origins": "*"}})
 DEBUG = True
+HOST = '0.0.0.0'
 PORT = 5000
 
 app.secret_key = '2#$$#SFGA#$@%FSG%#??|{KJHJK{KNKJK?KKJ\mnkjj'
-
+@app.route("/")
+def test():
+    return "hello"
 if __name__ == '__main__':
     initialize()
-    app.run(debug=DEBUG, port=PORT)
+    app.run(host=HOST,debug=DEBUG, port=PORT)
