@@ -214,6 +214,31 @@ class GetSensorDetailsMonitor(Resource):
 
         return jsonify({'statusCode': 200,'sensorInfo':result})
 
+class GetSensorDetailsMonitorAdmin(Resource):
+    def __init__(self):
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument('username', required=True, help='username is required', location=['form', 'json'])
+
+    def post(self):
+        args = self.reqparse.parse_args()
+        result = []
+        count_instances = 0
+        query = Sensor.select().where(Sensor.Status != 'terminated')
+        sensorInfo = query.execute()
+
+        for sensor in sensorInfo:
+            individual_instance = {}
+            individual_instance['SensorHubName'] = sensor.SensorHubName
+            individual_instance['SensorId'] = sensor.SensorId
+            individual_instance['SensorType'] = sensor.SensorType
+            individual_instance['Status'] = sensor.Status
+            individual_instance['UserName'] = sensor.UserName
+            count_instances = count_instances + 1
+            individual_instance['index'] = count_instances
+            result.append(individual_instance)
+
+        return jsonify({'statusCode': 200,'sensorInfo':result})
+
 
 login_api = Blueprint('resources.validate', __name__)
 
@@ -229,5 +254,6 @@ api.add_resource(ActivateUser, '/api/v1/activate', endpoint='activateuser')
 api.add_resource(DeactivateUser, '/api/v1/deactivate', endpoint='deactivateuser')
 api.add_resource(DeleteUser, '/api/v1/deleteuser', endpoint='deleteuser')
 api.add_resource(GetSensorDetailsMonitor, '/api/v1/getSensorDetailsMonitor', endpoint='getsensordetailsmonitor')
+api.add_resource(GetSensorDetailsMonitorAdmin, '/api/v1/getSensorDetailsMonitorAdmin', endpoint='getsensordetailsmonitoradmin')
 
 
