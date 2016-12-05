@@ -45,6 +45,7 @@ class Sensor(Model):
     SensorHubName = CharField(max_length=40)
     SensorId = CharField(unique=True)
     SensorType = CharField(max_length=40)
+    Region = CharField(max_length=40)
     Status = CharField(max_length=40)
     StartTime = DateTimeField(null=True)
     StopTime = DateTimeField(null=True)

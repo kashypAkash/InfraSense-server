@@ -158,6 +158,7 @@ class createSensorHub(Resource):
             sensorHubRequired = 1
             count = sensors.get('count')
             type = sensors.get('type')
+            region = sensors.get('region')
             try:
                 instances = [instance.id for instance in ec2.create_instances(
                     ImageId=args['imageId'], MinCount=count, MaxCount=count, InstanceType='t2.micro')]
@@ -165,7 +166,7 @@ class createSensorHub(Resource):
                 for instance in instances:
                     individual_instance = {}
                     sensor_values = {"UserName": args.username, "SensorHubName": args.sensorhubname,
-                                     "SensorId": instance, "SensorType": type, "Status": "running", "StartTime":dt.datetime.now()}
+                                     "SensorId": instance, "SensorType": type, "Region": region, "Status": "running", "StartTime":dt.datetime.now()}
                     object_values = {"username" : args.username, "SensorHubName": args.sensorhubname,
                                       "SensorId" : instance, "SensorType": type, "Status": "running", "StartTime":dt.datetime.now()}
                    # UserSensorHubDetails.create(**object_values)
@@ -173,6 +174,7 @@ class createSensorHub(Resource):
                     individual_instance['SensorId'] = instance
                     individual_instance['SensorType'] = type
                     individual_instance['sensorhubname'] = args['sensorhubname']
+                    individual_instance['Region'] = region
                     count_instances = count_instances + 1
                     individual_instance['index'] = count_instances
                     result.append(individual_instance)
@@ -192,6 +194,8 @@ class addToSensorHub(Resource):
         self.reqparse.add_argument('sensorhubname', required=True, help='sensor hub name required'
                                , location=['form', 'json'])
         self.reqparse.add_argument('sensorType', required=True, help='sensor type info is required'
+                               , location=['form', 'json'])
+        self.reqparse.add_argument('region', required=True, help='sensor region is required'
                                , location=['form', 'json'])
         self.reqparse.add_argument('imageId', required=True, help='Image Id is required'
                                , location=['form', 'json'])
@@ -214,7 +218,8 @@ class addToSensorHub(Resource):
                 print("Instance values:" + instance)
                 individual_instance = {}
                 sensor_values = {"UserName": args.username, "SensorHubName": args.sensorhubname,
-                                 "SensorId": instance, "SensorType": args['sensorType'], "Status": "running", "StartTime":dt.datetime.now()}
+                                 "SensorId": instance, "SensorType": args['sensorType'],
+                                 "Region": args['region'], "Status": "running", "StartTime":dt.datetime.now()}
                 Sensor.create(**sensor_values)
                 individual_instance['SensorId'] = instance
                 individual_instance['SensorType'] = args['sensorType']
@@ -403,6 +408,40 @@ class getAvailableSensorTypesDetails(Resource):
             result.append(individual_sensor)
         return jsonify({'statusCode': 200, 'instanceDetails': result})
 
+class getAvailableSensorHubDetails(Resource):
+
+    def __init__(self):
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument('username', required=True, help='User name is required'
+                               , location=['form', 'json'])
+
+    def post(self):
+        args = self.reqparse.parse_args()
+        query = Sensor.select(Sensor.SensorHubName).where(Sensor.UserName == args['username'] and
+                                                          Sensor.Status != 'terminated').distinct()
+
+
+        result  = [{'SensorHubName': sensor.SensorHubName} for sensor in query.execute()]
+        return jsonify({'statusCode': 200, 'sensorHubs': result})
+
+
+class getUserSensorHubSensorDetails(Resource):
+
+    def __init__(self):
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument('username', required=True, help='User name is required'
+                               , location=['form', 'json'])
+        self.reqparse.add_argument('sensorhubname', required=True, help='sensor hub name required'
+                               , location=['form', 'json'])
+
+    def post(self):
+        args = self.reqparse.parse_args()
+        query = Sensor.select().where(Sensor.SensorHubName == args['sensorhubname'] and Sensor.UserName == args['username'] and Sensor.Status != 'terminated')
+        result  = [{'SensorHubName': sensor.SensorHubName, 'SensorId': sensor.SensorId
+                    , 'SensorType': sensor.SensorType, 'Status': sensor.Status, 'Region': sensor.Region} for sensor in query.execute()]
+
+        return jsonify({'statusCode': 200, 'sensorHubs': result})
+
 class addSensorType(Resource):
 
     def __init__(self):
@@ -417,6 +456,40 @@ class addSensorType(Resource):
         sensor_value = {"SensorType": args['SensorType'], "Region": args['Region'],
                          "ChargePerHour": 0.00}
         SensorDetails.create(**sensor_value)
+        return jsonify({'statusCode': 200})
+
+
+class deleteUserSensorHub(Resource):
+
+    def __init__(self):
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument('username', required=True, help='User name is required'
+                               , location=['form', 'json'])
+        self.reqparse.add_argument('sensorhubname', required=True, help='sensor hub name required'
+                               , location=['form', 'json'])
+
+    def post(self):
+        args = self.reqparse.parse_args()
+        query = Sensor.select().where(Sensor.UserName == args['username'] and
+                                                          Sensor.Status != 'terminated'
+                                      and Sensor.SensorHubName == args['sensorhubname']).distinct();
+        sensorsInfo = query.execute();
+        for sensor in sensorsInfo:
+            val = ec2.instances.filter(InstanceIds=[sensor.SensorId]).terminate()
+            query = Sensor.select().where(Sensor.SensorId == sensor.SensorId)
+            result = query.execute()
+            for r in result:
+                if (r.Status == 'running'):
+                    usage = dt.datetime.now() - r.StartTime
+                    hours = (usage.seconds) / 3600
+                    activeHrs = r.ActiveHours + hours
+                    q = Sensor.update(Status='terminated', StopTime=dt.datetime.now(),
+                                      ActiveHours=round(activeHrs, 1)).where(Sensor.SensorId == sensor.SensorId)
+                    q.execute()
+                elif (r.Status == 'stopped'):
+                    q = Sensor.update(Status='terminated', StopTime=dt.datetime.now()).where(
+                        Sensor.SensorId == sensor.SensorId)
+                    q.execute()
         return jsonify({'statusCode': 200})
 
 aws_api = Blueprint('endpoints.aws', __name__)
@@ -435,6 +508,10 @@ api.add_resource(deleteFromSensorHub, '/api/v1/deleteFromSensorHub', endpoint='d
 api.add_resource(getUserSensorDetails, '/api/v1/getUserSensorDetails', endpoint='getUserSensorDetails')
 api.add_resource(getAvailableSensorTypesDetails, '/api/v1/getAvailableSensorTypesDetails', endpoint='getAvailableSensorTypesDetails')
 api.add_resource(addSensorType, '/api/v1/addSensorType', endpoint='addSensorType')
+api.add_resource(getAvailableSensorHubDetails, '/api/v1/getAvailableSensorHubDetails', endpoint='getAvailableSensorHubDetails')
+api.add_resource(getUserSensorHubSensorDetails, '/api/v1/getUserSensorHubSensorDetails', endpoint='getUserSensorHubSensorDetails')
+api.add_resource(deleteUserSensorHub, '/api/v1/deleteUserSensorHub', endpoint='deleteUserSensorHub')
+
 
 
 
