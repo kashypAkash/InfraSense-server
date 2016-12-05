@@ -19,7 +19,7 @@ class User(Model):
     UserName = CharField(unique=True)
     Password = CharField(max_length=40)
     EmailId = CharField(unique=True)
-    Active = CharField(max_length=20)
+    Active = CharField(max_length=20, null=True)
 
     class Meta:
         database = DATABASE
@@ -48,7 +48,7 @@ class Sensor(Model):
     Status = CharField(max_length=40)
     StartTime = DateTimeField(null=True)
     StopTime = DateTimeField(null=True)
-    ActiveHours = DecimalField(decimal_places=1, default=0.0, null=True)
+    ActiveHours = FloatField(default=0.0)
 
     class Meta:
         database = DATABASE
