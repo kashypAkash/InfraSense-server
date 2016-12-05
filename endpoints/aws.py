@@ -195,6 +195,8 @@ class addToSensorHub(Resource):
                                , location=['form', 'json'])
         self.reqparse.add_argument('sensorType', required=True, help='sensor type info is required'
                                , location=['form', 'json'])
+        self.reqparse.add_argument('region', required=True, help='sensor region is required'
+                               , location=['form', 'json'])
         self.reqparse.add_argument('imageId', required=True, help='Image Id is required'
                                , location=['form', 'json'])
         self.reqparse.add_argument('username', required=True, help='User name is required'
@@ -216,7 +218,8 @@ class addToSensorHub(Resource):
                 print("Instance values:" + instance)
                 individual_instance = {}
                 sensor_values = {"UserName": args.username, "SensorHubName": args.sensorhubname,
-                                 "SensorId": instance, "SensorType": args['sensorType'], "Status": "running", "StartTime":dt.datetime.now()}
+                                 "SensorId": instance, "SensorType": args['sensorType'],
+                                 "Region": args['region'], "Status": "running", "StartTime":dt.datetime.now()}
                 Sensor.create(**sensor_values)
                 individual_instance['SensorId'] = instance
                 individual_instance['SensorType'] = args['sensorType']
@@ -433,12 +436,10 @@ class getUserSensorHubSensorDetails(Resource):
 
     def post(self):
         args = self.reqparse.parse_args()
-        query = Sensor.select().where(Sensor.UserName == args['username'] and
-                                                          Sensor.Status != 'terminated'
-                                      and Sensor.SensorHubName == args['sensorhubname']).distinct()
-
+        query = Sensor.select().where(Sensor.SensorHubName == args['sensorhubname'] and Sensor.UserName == args['username'] and Sensor.Status != 'terminated')
         result  = [{'SensorHubName': sensor.SensorHubName, 'SensorId': sensor.SensorId
                     , 'SensorType': sensor.SensorType, 'Status': sensor.Status, 'Region': sensor.Region} for sensor in query.execute()]
+
         return jsonify({'statusCode': 200, 'sensorHubs': result})
 
 class addSensorType(Resource):
