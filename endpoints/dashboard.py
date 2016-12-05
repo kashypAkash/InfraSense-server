@@ -35,7 +35,7 @@ class Totalclusters(Resource):
 
     '''Get the total no of cluster'''
     def get(self):
-        return jsonify({'statusCode':200, 'cluster':SensorCluster.select().count()})
+        return jsonify({'statusCode':200, 'clusters':SensorCluster.select().count()})
 
 class Totalclusterbyaccount(Resource):
     '''Get the total no of Sensor'''
@@ -111,10 +111,29 @@ class Sensorsperclusterbyaccount(Resource):
         return jsonify({'statusCode':200, 'count':count, 'clusters':clusters})
 
 
+class Sensorspercluster(Resource):
+
+    def get(self):
+
+        query = (Sensor
+                 .select(Sensor.SensorHubName, fn.COUNT(Sensor.SensorId).alias('count'))
+                 .group_by(Sensor.SensorHubName))
+        count=[]
+        clusters =[]
+        for row in query.execute():
+            count.append(row.count)
+            clusters.append(row.SensorHubName)
+
+        return jsonify({'statusCode':200, 'count':count, 'clusters':clusters})
+
 class Activesensors(Resource):
 
     def get(self):
-        return jsonify({'statusCode':200, 'activesensors': Sensor.select().where(Sensor.Status == 'running').count()})
+        sensors = Sensor.select().where(Sensor.Status == 'running')
+        result =[ {'status':sensor.Status,'sensorid':sensor.SensorId, 'clustername':sensor.SensorHubName,
+                   'type':sensor.SensorType} for sensor in sensors]
+
+        return jsonify({'statusCode':200, 'activesensors': sensors.count(),'result':result})
 
 class Activesensorsbyaccount(Resource):
     '''Fetch the active sensor for a user'''
@@ -134,7 +153,11 @@ class Activesensorsbyaccount(Resource):
 class Pendingsensors(Resource):
 
     def get(self):
-        return jsonify({'statusCode':200, 'pendingsensors': Sensor.select().where(Sensor.Status == 'pending').count()})
+        sensors = Sensor.select().where(Sensor.Status == 'stopped')
+        result =[ {'status':sensor.Status,'sensorid':sensor.SensorId, 'clustername':sensor.SensorHubName,
+               'type':sensor.SensorType} for sensor in sensors]
+
+        return jsonify({'statusCode':200, 'pendingsensors': sensors.count(),'result':result})
 
 class Pendingsensorsbyaccount(Resource):
     '''Fetch the pending sensor for a user'''
@@ -155,7 +178,12 @@ class Pendingsensorsbyaccount(Resource):
 class Terminatedsensors(Resource):
 
     def get(self):
-        return jsonify({'statusCode':200, 'terminatedsensors': Sensor.select().where(Sensor.Status == 'terminated').count()})
+        sensors = Sensor.select().where(Sensor.Status == 'terminated')
+        result =[ {'status':sensor.Status,'sensorid':sensor.SensorId, 'clustername':sensor.SensorHubName,
+                   'type':sensor.SensorType} for sensor in sensors]
+
+        return jsonify({'statusCode':200, 'terminatedsensors': sensors.count(),'result':result})
+
 
 
 class Terminatedsensorsbyaccount(Resource):
@@ -188,6 +216,7 @@ api.add_resource(Sensorsbytype, '/api/v1/typecount', endpoint='sensorsbytype')
 api.add_resource(Activesensors, '/api/v1/activesensors', endpoint='activesensor')
 api.add_resource(Pendingsensors, '/api/v1/pendingsensors', endpoint='pendingsensors')
 api.add_resource(Terminatedsensors, '/api/v1/terminatedsensors', endpoint='terminatedsensors')
+api.add_resource(Sensorspercluster, '/api/v1/sensorspercluster', endpoint='sensorspercluster')
 
 # User Api
 api.add_resource(Totalsensorsbyaccount, '/api/v1/totalsensorsbyaccount', endpoint='totalsensorsbyaccount')
