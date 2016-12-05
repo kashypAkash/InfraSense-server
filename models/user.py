@@ -19,7 +19,7 @@ class User(Model):
     UserName = CharField(unique=True)
     Password = CharField(max_length=40)
     EmailId = CharField(unique=True)
-    Active = CharField(max_length=20)
+    Active = CharField(max_length=20, null=True)
 
     class Meta:
         database = DATABASE

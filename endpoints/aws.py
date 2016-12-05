@@ -140,13 +140,12 @@ class createSensorHub(Resource):
             sensorHubRequired = 1
             count = sensors.get('count')
             type = sensors.get('type')
-            individual_instance={}
             try:
                 instances = [instance.id for instance in ec2.create_instances(
                     ImageId=args['imageId'], MinCount=count, MaxCount=count, InstanceType='t2.micro')]
 
                 for instance in instances:
-                    print("Instance values:" + instance)
+                    individual_instance = {}
                     sensor_values = {"UserName": args.username, "SensorHubName": args.sensorhubname,
                                      "SensorId": instance, "SensorType": type, "Status": "running"}
                     object_values = {"username" : args.username, "SensorHubName": args.sensorhubname,
@@ -165,7 +164,6 @@ class createSensorHub(Resource):
         if(sensorHubRequired == 1):
             sensorHub_Values = {"UserName": args.username, "SensorHubName": args.sensorhubname, "Status": "running"}
             SensorCluster.create(**sensorHub_Values)
-
         return jsonify({'statusCode': 200, 'instanceDetails' :result})
 
 class addToSensorHub(Resource):
@@ -372,6 +370,37 @@ class getUserSensorDetails(Resource):
             result.append(individual_instance)
         return jsonify({'statusCode': 200, 'instanceDetails': result})
 
+class getAvailableSensorTypesDetails(Resource):
+
+    def get(self):
+        query = SensorDetails.select()
+        sensorsInfo = query.execute()
+        result=[]
+
+        for sensor in sensorsInfo:
+            individual_sensor = {}
+            individual_sensor['index'] = sensor.id
+            individual_sensor['SensorType'] = sensor.SensorType
+            individual_sensor['Region'] = sensor.Region
+            result.append(individual_sensor)
+        return jsonify({'statusCode': 200, 'instanceDetails': result})
+
+class addSensorType(Resource):
+
+    def __init__(self):
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument('SensorType', required=True, help='sensor type is required'
+                               , location=['form', 'json'])
+        self.reqparse.add_argument('Region', required=True, help='Region is required'
+                               , location=['form', 'json'])
+
+    def post(self):
+        args = self.reqparse.parse_args()
+        sensor_value = {"SensorType": args['SensorType'], "Region": args['Region'],
+                         "ChargePerHour": 0.00}
+        SensorDetails.create(**sensor_value)
+        return jsonify({'statusCode': 200})
+
 aws_api = Blueprint('endpoints.aws', __name__)
 api = Api(aws_api)
 
@@ -386,3 +415,8 @@ api.add_resource(getMonitoringInfo, '/api/v1/getMonitoringInfo', endpoint='getMo
 api.add_resource(addToSensorHub, '/api/v1/addToSensorHub', endpoint='addToSensorHub')
 api.add_resource(deleteFromSensorHub, '/api/v1/deleteFromSensorHub', endpoint='deleteFromSensorHub')
 api.add_resource(getUserSensorDetails, '/api/v1/getUserSensorDetails', endpoint='getUserSensorDetails')
+api.add_resource(getAvailableSensorTypesDetails, '/api/v1/getAvailableSensorTypesDetails', endpoint='getAvailableSensorTypesDetails')
+api.add_resource(addSensorType, '/api/v1/addSensorType', endpoint='addSensorType')
+
+
+
