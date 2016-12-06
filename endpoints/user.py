@@ -207,6 +207,7 @@ class GetSensorDetailsMonitor(Resource):
             individual_instance['SensorHubName'] = sensor.SensorHubName
             individual_instance['SensorId'] = sensor.SensorId
             individual_instance['SensorType'] = sensor.SensorType
+            individual_instance['Region'] = sensor.Region
             individual_instance['Status'] = sensor.Status
             count_instances = count_instances + 1
             individual_instance['index'] = count_instances
