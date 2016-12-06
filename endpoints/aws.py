@@ -252,9 +252,9 @@ class deleteFromSensorHub(Resource):
         args = self.reqparse.parse_args()
         count_instances = 0
         result=[]
-        query = Sensor.select().where(Sensor.SensorHubName == args['sensorhubname'] and
-                                                             Sensor.SensorType == args['sensorType'] and
-                                                             Sensor.UserName == args['username'] and
+        query = Sensor.select().where(Sensor.SensorHubName == args['sensorhubname'] ,
+                                                             Sensor.SensorType == args['sensorType'] ,
+                                                             Sensor.UserName == args['username'] ,
                                                              Sensor.Status != 'terminated').limit(args['count'])
         sensorInfo = query.execute()
 
@@ -417,7 +417,7 @@ class getAvailableSensorHubDetails(Resource):
 
     def post(self):
         args = self.reqparse.parse_args()
-        query = Sensor.select(Sensor.SensorHubName).where(Sensor.UserName == args['username'] and
+        query = Sensor.select(Sensor.SensorHubName).where(Sensor.UserName == args['username'] ,
                                                           Sensor.Status != 'terminated').distinct()
 
 
@@ -436,7 +436,7 @@ class getUserSensorHubSensorDetails(Resource):
 
     def post(self):
         args = self.reqparse.parse_args()
-        query = Sensor.select().where(Sensor.SensorHubName == args['sensorhubname'] and Sensor.UserName == args['username'] and Sensor.Status != 'terminated')
+        query = Sensor.select().where(Sensor.SensorHubName == args['sensorhubname'] , Sensor.UserName == args['username'] , Sensor.Status != 'terminated')
         result  = [{'SensorHubName': sensor.SensorHubName, 'SensorId': sensor.SensorId
                     , 'SensorType': sensor.SensorType, 'Status': sensor.Status, 'Region': sensor.Region} for sensor in query.execute()]
 
@@ -470,9 +470,9 @@ class deleteUserSensorHub(Resource):
 
     def post(self):
         args = self.reqparse.parse_args()
-        query = Sensor.select().where(Sensor.UserName == args['username'] and
+        query = Sensor.select().where(Sensor.UserName == args['username'] ,
                                                           Sensor.Status != 'terminated'
-                                      and Sensor.SensorHubName == args['sensorhubname']).distinct();
+                                      , Sensor.SensorHubName == args['sensorhubname']).distinct();
         sensorsInfo = query.execute();
         for sensor in sensorsInfo:
             val = ec2.instances.filter(InstanceIds=[sensor.SensorId]).terminate()
@@ -491,6 +491,44 @@ class deleteUserSensorHub(Resource):
                         Sensor.SensorId == sensor.SensorId)
                     q.execute()
         return jsonify({'statusCode': 200})
+
+class GetClusterSensorDetails(Resource):
+    def __init__(self):
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument('username', required=True, help='username is required', location=['form', 'json'])
+        self.reqparse.add_argument('sensorhubname', required=True, help='sensorhubname is required', location=['form', 'json'])
+
+    def post(self):
+        args = self.reqparse.parse_args()
+        result = []
+        count_instances = 0
+        query = Sensor.select().where(Sensor.UserName == args['username'] , Sensor.Status != 'terminated' , Sensor.SensorHubName == args['sensorhubname'])
+        sensorInfo = query.execute()
+
+        for sensor in sensorInfo:
+            individual_instance = {}
+            individual_instance['SensorHubName'] = sensor.SensorHubName
+            individual_instance['SensorId'] = sensor.SensorId
+            individual_instance['SensorType'] = sensor.SensorType
+            individual_instance['Region'] = sensor.Region
+            individual_instance['Status'] = sensor.Status
+            if(sensor.Status == 'running'):
+                calcTime = dt.datetime.now() - sensor.StartTime
+                res = (calcTime.seconds) / 3600
+                individual_instance['ActiveHours'] = round(res, 1) + sensor.ActiveHours
+            elif(sensor.Status == 'stopped'):
+                individual_instance['ActiveHours'] = sensor.ActiveHours
+            val = ec2.Instance(sensor.SensorId);
+            computeTime = time.mktime(val.launch_time.timetuple())
+            offset = datetime.fromtimestamp(computeTime) - datetime.utcfromtimestamp(computeTime)
+            res = val.launch_time + offset
+            ltvar = res.strftime('%m/%d/%Y, %I:%M %p')
+            individual_instance['LaunchDate'] = ltvar
+            count_instances = count_instances + 1
+            individual_instance['index'] = count_instances
+            result.append(individual_instance)
+
+        return jsonify({'statusCode': 200,'clusterInfo':result})
 
 aws_api = Blueprint('endpoints.aws', __name__)
 api = Api(aws_api)
@@ -511,7 +549,7 @@ api.add_resource(addSensorType, '/api/v1/addSensorType', endpoint='addSensorType
 api.add_resource(getAvailableSensorHubDetails, '/api/v1/getAvailableSensorHubDetails', endpoint='getAvailableSensorHubDetails')
 api.add_resource(getUserSensorHubSensorDetails, '/api/v1/getUserSensorHubSensorDetails', endpoint='getUserSensorHubSensorDetails')
 api.add_resource(deleteUserSensorHub, '/api/v1/deleteUserSensorHub', endpoint='deleteUserSensorHub')
-
+api.add_resource(GetClusterSensorDetails, '/api/v1/getClusterSensorDetails', endpoint='getclustersensordetails')
 
 
 

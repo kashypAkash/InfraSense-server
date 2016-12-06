@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify
 from flask_restful import reqparse, Resource, Api, marshal_with, marshal, fields
 from models.user import *
 from peewee import *
+import datetime as dt
 
 user_fields = {
     'UserName': fields.String,
@@ -93,7 +94,7 @@ class DeleteSensor(Resource):
     def post(self):
         args = self.reqparse.parse_args()
         q = SensorDetails.delete().where(SensorDetails.SensorType == args['sensorType']
-                                  and SensorDetails.Region == args['region'])
+                                  , SensorDetails.Region == args['region'])
         q.execute()
         return jsonify({'statusCode': 200})
 
@@ -108,7 +109,7 @@ class EditSensor(Resource):
         args = self.reqparse.parse_args()
         print(args)
         q = SensorDetails.update(ChargePerHour=args['charges']).where(SensorDetails.Region == args['region']
-            and SensorDetails.SensorType == args['sensorType']
+            , SensorDetails.SensorType == args['sensorType']
                                   )
         q.execute()
         return jsonify({'statusCode': 200})
@@ -199,7 +200,7 @@ class GetSensorDetailsMonitor(Resource):
         args = self.reqparse.parse_args()
         result = []
         count_instances = 0
-        query = Sensor.select().where(Sensor.UserName == args['username'] and Sensor.Status != 'terminated')
+        query = Sensor.select().where(Sensor.UserName == args['username'] , Sensor.Status != 'terminated')
         sensorInfo = query.execute()
 
         for sensor in sensorInfo:
@@ -214,6 +215,32 @@ class GetSensorDetailsMonitor(Resource):
             result.append(individual_instance)
 
         return jsonify({'statusCode': 200,'sensorInfo':result})
+
+class GetSensorDetailsMonitorCluster(Resource):
+    def __init__(self):
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument('username', required=True, help='username is required', location=['form', 'json'])
+
+    def post(self):
+        args = self.reqparse.parse_args()
+        result = []
+        count_instances = 0
+        query = SensorCluster.select().where(SensorCluster.UserName == args['username'] , SensorCluster.Status != 'terminated')
+        sensorInfo = query.execute()
+
+        for sensor in sensorInfo:
+            individual_instance = {}
+            individual_instance['SensorHubName'] = sensor.SensorHubName
+            individual_instance['Status'] = sensor.Status
+            q = Sensor.select().where(Sensor.UserName == args['username'] , Sensor.SensorHubName == sensor.SensorHubName , Sensor.Status != 'terminated').count()
+            individual_instance['Count'] = q
+            count_instances = count_instances + 1
+            individual_instance['index'] = count_instances
+            result.append(individual_instance)
+
+        return jsonify({'statusCode': 200,'clusterInfo':result})
+
+
 
 class GetSensorDetailsMonitorAdmin(Resource):
     def __init__(self):
@@ -256,5 +283,7 @@ api.add_resource(DeactivateUser, '/api/v1/deactivate', endpoint='deactivateuser'
 api.add_resource(DeleteUser, '/api/v1/deleteuser', endpoint='deleteuser')
 api.add_resource(GetSensorDetailsMonitor, '/api/v1/getSensorDetailsMonitor', endpoint='getsensordetailsmonitor')
 api.add_resource(GetSensorDetailsMonitorAdmin, '/api/v1/getSensorDetailsMonitorAdmin', endpoint='getsensordetailsmonitoradmin')
+api.add_resource(GetSensorDetailsMonitorCluster, '/api/v1/getSensorDetailsMonitorCluster', endpoint='getsensordetailsmonitorcluster')
+
 
 
