@@ -240,7 +240,29 @@ class GetSensorDetailsMonitorCluster(Resource):
 
         return jsonify({'statusCode': 200,'clusterInfo':result})
 
+class GetSensorDetailsMonitorClusterAdmin(Resource):
+    def __init__(self):
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument('username', required=True, help='username is required', location=['form', 'json'])
 
+    def post(self):
+        args = self.reqparse.parse_args()
+        result = []
+        count_instances = 0
+        query = SensorCluster.select().where(SensorCluster.Status != 'terminated')
+        sensorInfo = query.execute()
+
+        for sensor in sensorInfo:
+            individual_instance = {}
+            individual_instance['SensorHubName'] = sensor.SensorHubName
+            individual_instance['Status'] = sensor.Status
+            q = Sensor.select().where(Sensor.SensorHubName == sensor.SensorHubName , Sensor.Status != 'terminated').count()
+            individual_instance['Count'] = q
+            count_instances = count_instances + 1
+            individual_instance['index'] = count_instances
+            result.append(individual_instance)
+
+        return jsonify({'statusCode': 200,'clusterInfo':result})
 
 class GetSensorDetailsMonitorAdmin(Resource):
     def __init__(self):
@@ -284,6 +306,7 @@ api.add_resource(DeleteUser, '/api/v1/deleteuser', endpoint='deleteuser')
 api.add_resource(GetSensorDetailsMonitor, '/api/v1/getSensorDetailsMonitor', endpoint='getsensordetailsmonitor')
 api.add_resource(GetSensorDetailsMonitorAdmin, '/api/v1/getSensorDetailsMonitorAdmin', endpoint='getsensordetailsmonitoradmin')
 api.add_resource(GetSensorDetailsMonitorCluster, '/api/v1/getSensorDetailsMonitorCluster', endpoint='getsensordetailsmonitorcluster')
+api.add_resource(GetSensorDetailsMonitorClusterAdmin, '/api/v1/getSensorDetailsMonitorClusterAdmin', endpoint='getsensordetailsmonitorclusteradmin')
 
 
 
