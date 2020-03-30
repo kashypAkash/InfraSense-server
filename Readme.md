@@ -4,7 +4,7 @@
 * Kashyap, Akash
 
 ### Setup
-* Install python 3.X
+* Install python 3.X.
 * Install dependent libraries
     - pip3 install -r requirements.txt
     - manual steps: (Not needed if above cmd is run)  
